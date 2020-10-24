@@ -1,0 +1,140 @@
+# Endpoints
+endpoints:
+  restart:
+    enabled: true
+
+# Eureka
+eureka:
+  client:
+    enabled: ${ENABLE_EUREKA:true}
+    registryFetchIntervalSeconds: 5
+    serviceUrl:
+      defaultZone: ${REGISTRY_SERVICE_URL:http://localhost:8761/eureka}
+  instance:
+    statusPageUrlPath: /actuator/info
+    healthCheckUrlPath: /actuator/health
+    preferIpAddress: true
+    instanceId: ${spring.cloud.client.hostname}:${random.int}
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 5
+
+#Feign
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 30000
+        loggerLevel: basic
+        readTimeout: 30000
+  compression:
+    request:
+      mime-types: "application/json"
+
+# Logging
+logging:
+  level:
+    com.netflix.discovery: 'ERROR'
+    org.springframework.cloud: 'ERROR'
+    org.springframework.data.mongodb.core.MongoTemplate: DEBUG
+
+
+# Management
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+    metrics:
+      export:
+        prometheus:
+          enabled: true
+    endpoint:
+      metrics:
+        enabled: false
+      prometheus:
+        enabled: true
+  security:
+    enabled: false
+
+# Integration
+integration:
+  campanha:
+    service-name: CAMPANHA-V1-0-0
+  nomeFila: "socioMQ.group"
+  nomeFilaFalha: "socioMQ-falha.group"
+
+# Server
+server:
+  port: 8091
+  servlet:
+    context-path: /
+  compression:
+    enabled: true
+    mime-types:
+      - application/json
+    min-response-size: 10240
+  
+spring:
+  mvc:
+    servlet:
+      load-on-startup: 1
+  h2:
+    console:
+      enabled: true
+      path: /h2db
+  datasource:
+    url: jdbc:h2:file:/home/rodrigo/h2db;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+#MQ
+  cloud:
+    stream:
+      binding-retry-interval: 3
+      default:
+        contentType: application/json
+      bindings:
+        socioReprocessarOutput:
+          destination: socioMQ-falha
+        socioReprocessarInput:
+          destination: socioMQ-falha
+          group: group
+        socioOutput:
+          destination: socioMQ
+        socioInput:
+          destination: socioMQ
+          group: group
+          durableSubscription: true
+          consumer:
+            concurrency: 3
+            maxAttempts: 5
+            backOffInitialInterval: 5000
+            backOffMaxInterval: 30000
+            acknowledgeMode: AUTO
+      binders:
+        rabbit:
+          type: rabbit
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+    virtual-host: project-automation
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 3s
+          max-attempts: 6
+          max-interval: 60s
+          multiplier: 2
+        
